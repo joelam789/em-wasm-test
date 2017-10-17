@@ -151,7 +151,9 @@ onnodecreate = function(e) {
 		node.audioErrorLogFlag = evt.data.errorLogFlag;
 		node.audioDataQueueSize = evt.data.maxQueueSize;
 		
-		if (node.mediaInfo.indexOf('pcm') >= 0) {
+		if (node.mediaInfo.length == 0) { // raw float data
+			node.prepareAudioBuffer(evt.data.streamData, node.inputChannelCount);
+		} else if (node.mediaInfo.indexOf('pcm') >= 0) { // raw int data
 			node.prepareAudioBuffer(node.bufferToArray(evt.data.streamData), node.inputChannelCount);
 		} else {
 			node.context.decodeAudioData(evt.data.streamData, function(buffer) {

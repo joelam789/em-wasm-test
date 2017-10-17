@@ -224,9 +224,10 @@
 #include <emscripten.h>
 
 static uint16* snes_pixels = nullptr;
+static bool    is_external_buffer = false;
 static int     snes_pixel_count = 0;
-static int     snes_img_w = 0; 
-static int     snes_img_h = 0; 
+static int     snes_img_w = 0;
+static int     snes_img_h = 0;
 
 static uint32  screen_update_times = 0;
 
@@ -248,7 +249,7 @@ void exit_handler()
 	S9xDeinitAPU();
 	S9xGraphicsDeinit();
 
-	if (snes_pixels != nullptr)
+	if (snes_pixels != nullptr && !is_external_buffer)
 	{
 		delete[] snes_pixels;
 		snes_pixels = nullptr;
@@ -271,20 +272,10 @@ extern "C" int framesf()
 	return screen_update_times;
 }
 
-extern "C" int imgwf()
-{
-	return snes_img_w;
-}
-
-extern "C" int imghf()
-{
-	return snes_img_h;
-}
-
 extern "C" void showfpsf(int fps, int flags)
 {
 	static char txt[20];
-	sprintf(txt, flags > 0 ? "FPS=%d (WebGL)" : "FPS=%d (Canvas)", fps);
+	sprintf(txt, flags > 0 ? (flags == 1 ? "FPS=%d (WebGL)" : "FPS=%d (WebGL2)") : "FPS=%d (Canvas)", fps);
 	S9xSetInfoString(txt);
 }
 
@@ -293,6 +284,13 @@ extern "C" void setsrf(int inputRate, int outputRate)
 	Settings.SoundPlaybackRate = outputRate;
 	Settings.SoundInputRate = inputRate;
 	//Settings.Stereo = channelCount > 1 ? TRUE : FALSE;
+}
+
+extern "C" void setbuff(uint16* screenbuf)
+{
+	snes_pixels = screenbuf;
+	is_external_buffer = true;
+	EM_ASM( console.log("set display buffer! "); );
 }
 
 extern "C" int mainf(int argc, char** argv)
@@ -430,8 +428,16 @@ extern "C" int mainf(int argc, char** argv)
 
 	snes_pixel_count = snes_img_w * snes_img_h;
 
+	EM_ASM_({
+		window.set_game_screen_size($0, $1);
+	}, snes_img_w, snes_img_h);
+
 	// Allocate snes pixel buffer
-	snes_pixels = new (std::nothrow) uint16[snes_pixel_count];
+	if (snes_pixels == nullptr)
+	{
+		EM_ASM( console.log("create display buffer... "); );
+		snes_pixels = new (std::nothrow) uint16[snes_pixel_count];
+	}
 	if (snes_pixels == nullptr)
 	{
 		fprintf(stderr, "Could not allocate pixel buffer.\n");
@@ -447,13 +453,6 @@ extern "C" int mainf(int argc, char** argv)
 	S9xGraphicsInit();
 
 	fprintf(stderr, "\"%s\" on %s %s using HTML5 \n", Memory.ROMName, TITLE, VERSION);
-
-	EM_ASM_({
-		console.log("screen width: " + $0);
-		window.snes_canvas.width = window.buffer_canvas.width = $0;
-		console.log("screen height: " + $1);
-		window.snes_canvas.height = window.buffer_canvas.height = $1;
-	}, snes_img_w, snes_img_h);
 
 	S9xSetSoundMute(FALSE);
 	
@@ -716,30 +715,34 @@ void S9xPutImage (int width, int height)
 			console.log("height changed: " + $0 + " => " + $1);
 		}, prevHeight, height);
 
-	uint16 color = 0;
-	uint8 r,g,b;
 
-	int linelen = snes_img_w;
-	uint16* src = (uint16*) GFX.Screen;
-	
-	for (int y=0; y<height; y++)
+	if (!is_external_buffer)
 	{
-		for(int x=0; x<width; x++)
+		uint16 color = 0;
+		uint8 r,g,b;
+	
+		int linelen = snes_img_w;
+		uint16* src = (uint16*) GFX.Screen;
+		
+		for (int y=0; y<height; y++)
 		{
-			color = src[y * linelen + x];
-			
-			r = ((color>>11) & 0x1f) << 3;
-			g = ((color>>5) & 0x3f) << 2;
-			b = (color & 0x1f) << 3;
-
-			EM_ASM_(
+			for(int x=0; x<width; x++)
 			{
-				window.set_tex_buf($0, $1, $2, $3, $4, $5);
-			}, x, y, r, g, b, linelen);
-			
+				color = src[y * linelen + x];
+				
+				r = ((color>>11) & 0x1f) << 3;
+				g = ((color>>5) & 0x3f) << 2;
+				b = (color & 0x1f) << 3;
+	
+				EM_ASM_(
+				{
+					window.set_tex_buf($0, $1, $2, $3, $4, $5);
+				}, x, y, r, g, b, linelen);
+				
+			}
 		}
 	}
-
+	
 	EM_ASM( window.update_tex(); );
 
 	prevWidth  = width;
@@ -829,23 +832,20 @@ void S9xSoundCallback(void *data)
 
 	if (samplesHave > 0)
 	{
-		int maxSampleCount = Settings.SixteenBitSound ? 1024 : 2048;
-		uint8 tempBuffer[maxSampleCount];
-		memset(tempBuffer, 0, maxSampleCount);
+		static const int maxSampleCount = 1024;
+		static uint16 tempBuffer[maxSampleCount];
+		memset(tempBuffer, 0, maxSampleCount*2);
 
 		// Number of samples we can give
 		int samplesGive = (samplesHave > maxSampleCount) ? maxSampleCount : samplesHave;
 
 		// Get samples to our temporary buffer
-		S9xMixSamples(tempBuffer, samplesGive);
+		S9xMixSamples((uint8*)(&(tempBuffer[0])), samplesGive);
 
-		uint16* tempBuffer2 = (uint16*)(&(tempBuffer[0]));
+		EM_ASM_({window.create_new_audio_buffer($0);}, samplesGive/2);
 
-		EM_ASM(window.create_new_audio_buffer(););
-
-		for (int i=0; i<samplesGive; i++)
-			EM_ASM_({window.add_sound_data($0);}, 
-				Settings.SixteenBitSound ? tempBuffer2[i] : tempBuffer[i]);
+		for (int i=0; i<samplesGive; i+=2)
+			EM_ASM_({window.add_sound_data($0, $1, $2);}, i/2, tempBuffer[i], tempBuffer[i+1]);
 
 		EM_ASM(window.play_audio_buffer(););
 

@@ -52,7 +52,7 @@
 		
 		this.mediaInfo = "undefined";
 		
-		this.audioDataQueueSize = 128; // audio cache size
+		this.audioDataQueueSize = 256; // audio cache size
 		
 		this.clear = function() {
 			this.preloadedDataQueue = [];
@@ -231,8 +231,9 @@
 												maxQueueSize: this.audioDataQueueSize,
 												errorLogFlag: this.needErrorLog ? 1 : 0} );
 			} else {
-				
-				if (this.mediaInfo.indexOf('pcm') >= 0) {
+				if (this.mediaInfo.length == 0) { // raw float data
+					this.prepareAudioBuffer(this.preloadedDataQueue.length > 0 ? this.preloadedDataQueue.shift() : data, this.inputChannelCount);
+				} else if (this.mediaInfo.indexOf('pcm') >= 0) { // raw int data
 					this.prepareAudioBuffer(this.bufferToArray(this.preloadedDataQueue.length > 0 ? this.preloadedDataQueue.shift() : data),
 											this.inputChannelCount);
 				} else {

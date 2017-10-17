@@ -13,7 +13,7 @@ set CCFLAGS=-DLSB_FIRST -fomit-frame-pointer -fno-exceptions -fno-rtti -pedantic
 -D_GNU_SOURCE=1 -D_REENTRANT -DHAVE_MKSTEMP -DHAVE_STRINGS_H -DHAVE_SYS_IOCTL_H -DHAVE_STDINT_H  -DRIGHTSHIFT_IS_SAR
 
 emcc -O3 -lm ^
- -s EXPORTED_FUNCTIONS="['_mainf', '_framesf', '_showfpsf', '_setsrf', '_imgwf', '_imghf']" ^
+ -s EXPORTED_FUNCTIONS="['_mainf', '_framesf', '_showfpsf', '_setsrf', '_setbuff']" ^
  -s FORCE_FILESYSTEM=1 ^
  -s TOTAL_MEMORY=50331648 ^
  --preload-file test.sfc ^

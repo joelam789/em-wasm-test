@@ -38,6 +38,7 @@
     <script>
 
         var Module = {
+            noExitRuntime: true,
             onRuntimeInitialized: function() {
                 var e = document.getElementById('loadingDiv');
                 e.style.visibility = 'hidden';
@@ -46,15 +47,40 @@
         };
 
         var current_frames = 0;
+        var game_screen_width = 0;
+        var game_screen_height = 0;
         var tex_buf_array = null;
         var tex_buf_array8 = null;
         var tex_buf_array8u = null;
         var tex_buf_array32 = null;
+        var tex_buf_array16 = null;
+        var heap_buf_array16 = null; 
         var get_frames_func = null;
         var show_fps_func = null;
         var set_sample_rates_func = null;
-        var get_imgw_func = null;
-        var get_imgh_func = null;
+
+        function _arrayToHeap(typedArray){
+            var numBytes = typedArray.length * typedArray.BYTES_PER_ELEMENT;
+            var ptr = Module._malloc(numBytes);
+            var heapBytes = new Uint8Array(Module.HEAPU8.buffer, ptr, numBytes);
+            heapBytes.set(new Uint8Array(typedArray.buffer));
+            return heapBytes;
+        }
+
+        window.set_game_screen_size = function(w, h) {
+            console.log("screen width: " + w);
+            game_screen_width = w;
+            window.snes_canvas.width = window.buffer_canvas.width = w;
+            console.log("screen height: " + h);
+            game_screen_height = h;
+            window.snes_canvas.height = window.buffer_canvas.height = h;
+            if (using_gl == 2) {
+                tex_buf_array16 = new Uint16Array(game_screen_width * game_screen_height);
+                tex_buf_array16.fill(0xffff);
+                heap_buf_array16 = _arrayToHeap(tex_buf_array16);
+                Module.ccall('setbuff', null, ['number'], [heap_buf_array16.byteOffset]);
+            }
+        }
 
         window.clear_tex_buf = function() {
             tex_buf_array8.fill(0);
@@ -65,11 +91,15 @@
         };
 
         window.update_tex = function() {
-            var imgw = get_imgw_func();
-            var imgh = get_imgh_func();
             if (gl && tex_buf_array8u) {
-                tex_buf_array8u.set(tex_buf_array8);
-                updateTexture(gl, main_texture, tex_buf_array8u, imgw, imgh);
+                if (using_gl == 1) {
+                    tex_buf_array8u.set(tex_buf_array8);
+                    updateTexture(gl, main_texture, tex_buf_array8u, game_screen_width, game_screen_height);
+                } else {
+                    tex_buf_array16 = new Uint16Array(heap_buf_array16.buffer, heap_buf_array16.byteOffset, game_screen_width * game_screen_height);
+                    updateTexture(gl, main_texture, tex_buf_array16, game_screen_width, game_screen_height);
+                }
+                
             } else if (snes_canvas_img) {
                 snes_canvas_img.data.set(tex_buf_array8);
                 snes_canvas_ctx.putImageData(snes_canvas_img, 0, 0);
@@ -84,31 +114,27 @@
 
         var start_function = function(o) {
             if (o.style.display != "none") {
-
                 o.style.display = "none";
-
                 get_frames_func = Module.cwrap('framesf', 'number', null);
-                get_imgw_func = Module.cwrap('imgwf', 'number', null);
-                get_imgh_func = Module.cwrap('imghf', 'number', null);
                 show_fps_func = Module.cwrap('showfpsf', null, ['number', 'number']);
                 set_sample_rates_func = Module.cwrap('setsrf', null, ['number', 'number']);
 
                 Module.ccall('mainf', null, null);
 
-                tex_buf_array = new ArrayBuffer(get_imgw_func() * get_imgh_func() * 4);
+                tex_buf_array = new ArrayBuffer(game_screen_width * game_screen_height * 4);
                 if (tex_buf_array) {
                     tex_buf_array8 = new Uint8ClampedArray(tex_buf_array);
                     tex_buf_array32 = new Uint32Array(tex_buf_array);
-                    tex_buf_array8u = gl ? new Uint8Array(get_imgw_func() * get_imgh_func() * 4) : null;
+                    tex_buf_array8u = gl ? new Uint8Array(game_screen_width * game_screen_height * 4) : null;
                 }
                 snes_canvas_img = snes_canvas_ctx
-                                  ? snes_canvas_ctx.createImageData(get_imgw_func(), get_imgh_func())
+                                  ? snes_canvas_ctx.createImageData(game_screen_width, game_screen_height)
                                   : null;
 
                 setInterval(function() {
                     var fps = get_frames_func() - current_frames;
                     current_frames += fps;
-                    show_fps_func(fps, using_gl ? 1 : 0);
+                    show_fps_func(fps, using_gl);
                     //console.log("FPS: " + fps);
                 }, 1000);
             }
@@ -119,7 +145,7 @@
 
     <script>
         
-        var using_gl = true;
+        var using_gl = 1;
 
         var canvas = document.getElementById("snes-canvas");
 
@@ -139,18 +165,24 @@
         var main_texture = null;
         var gl_contextAttributes = { antialias:false };	// iOS10 bug？
 
-        if (using_gl) {
-            for (var i=0; i<4; i++) {
-                gl = canvas.getContext(["webgl","experimental-webgl","moz-webgl","webkit-3d"][i], gl_contextAttributes)
-                if (gl) break;
+        if (using_gl > 0) {
+            gl = canvas.getContext("webgl2");
+            if (gl) using_gl = 2;
+            else {
+                using_gl = 1;
+                for (var i=0; i<4; i++) {
+                    gl = canvas.getContext(["webgl","experimental-webgl","moz-webgl","webkit-3d"][i], gl_contextAttributes)
+                    if (gl) break;
+                }
             }
             if (!gl) throw "Unable to initialize WebGL. Your browser or machine may not support it.";
         } else {
+            using_gl = 0;
             snes_canvas_ctx = snes_canvas.getContext("2d");
             buffer_canvas_ctx = buffer_canvas.getContext("2d");
         }
 
-        if (using_gl && gl) {
+        if (using_gl > 0 && gl) {
             prepareGL(gl);
             main_texture = initTexture(gl);
         }
@@ -195,9 +227,14 @@
 
             gl.bindTexture(gl.TEXTURE_2D, new_texture);
 
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1,
+            if (using_gl == 2) {
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB565, 1, 1,
+                        0, gl.RGB, gl.UNSIGNED_SHORT_5_6_5, new Uint16Array([0x1F]));
+            } else {
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1,
                         0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255]));
-
+            }
+            
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -214,8 +251,15 @@
             gl.activeTexture(gl.TEXTURE0);
 
             gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 
-                            0, gl.RGBA, gl.UNSIGNED_BYTE, dataTypedArray);
+
+            if (using_gl == 2) {
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB565, width, height, 
+                    0, gl.RGB, gl.UNSIGNED_SHORT_5_6_5, dataTypedArray);
+            } else {
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 
+                    0, gl.RGBA, gl.UNSIGNED_BYTE, dataTypedArray);
+            }
+            
 
             gl.bindBuffer(gl.ARRAY_BUFFER, vx);
             gl.vertexAttribPointer(vx_ptr, 2, gl.FLOAT, false, 0, 0);
@@ -228,7 +272,7 @@
         var isChromeOnAndroid = navigator.userAgent.indexOf('Chrome') >= 0
                                     && navigator.userAgent.indexOf('Android') >= 0;
 
-        //isChromeOnAndroid = true;
+        isChromeOnAndroid = false;
 
         // init web audio
         if (!isChromeOnAndroid) AudioWorkerShim.polyfill();
@@ -252,7 +296,7 @@
         }
 
         var audio_player = new SimpleWebAudioStreamPlayer(aoptions);
-        audio_player.updateMediaInfo("pcm");
+        audio_player.updateMediaInfo(""); // raw float data
 
         var afilter = audioCtx.createBiquadFilter();
 		afilter.Q.value = 1.00;
@@ -264,12 +308,13 @@
 
         var audio_buffer_array = [];
 
-        window.create_new_audio_buffer = function() {
-            audio_buffer_array.push(new Array());
+        window.create_new_audio_buffer = function(len) {
+            audio_buffer_array.push([new Float32Array(len), new Float32Array(len)]);
         }
 
-        window.add_sound_data = function(data) {
-            audio_buffer_array[audio_buffer_array.length - 1].push(data);
+        window.add_sound_data = function(idx, left, right) {
+            audio_buffer_array[audio_buffer_array.length - 1][0][idx] = (left >= 0x8000) ? -(0x10000 - left) / 0x8000 : left / 0x7FFF;
+            audio_buffer_array[audio_buffer_array.length - 1][1][idx] = (right >= 0x8000) ? -(0x10000 - right) / 0x8000 : right / 0x7FFF;
         }
 
         window.play_audio_buffer = function() {
