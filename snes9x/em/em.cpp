@@ -224,7 +224,8 @@
 #include <emscripten.h>
 
 static uint16* snes_pixels = nullptr;
-static bool    is_external_buffer = false;
+static uint32* pixel_buffer = nullptr;
+static bool    is_external_screen_buffer = false;
 static int     snes_pixel_count = 0;
 static int     snes_img_w = 0;
 static int     snes_img_h = 0;
@@ -249,7 +250,7 @@ void exit_handler()
 	S9xDeinitAPU();
 	S9xGraphicsDeinit();
 
-	if (snes_pixels != nullptr && !is_external_buffer)
+	if (snes_pixels != nullptr && !is_external_screen_buffer)
 	{
 		delete[] snes_pixels;
 		snes_pixels = nullptr;
@@ -286,11 +287,17 @@ extern "C" void setsrf(int inputRate, int outputRate)
 	//Settings.Stereo = channelCount > 1 ? TRUE : FALSE;
 }
 
-extern "C" void setbuff(uint16* screenbuf)
+extern "C" void setscreenbuff(uint16* screenbuf)
 {
 	snes_pixels = screenbuf;
-	is_external_buffer = true;
-	EM_ASM( console.log("set display buffer! "); );
+	is_external_screen_buffer = true;
+	EM_ASM( console.log("set game display buffer! "); );
+}
+
+extern "C" void setpixelbuff(uint32* pixelbuf)
+{
+	pixel_buffer = pixelbuf;
+	EM_ASM( console.log("set gui display buffer! "); );
 }
 
 extern "C" int mainf(int argc, char** argv)
@@ -716,7 +723,7 @@ void S9xPutImage (int width, int height)
 		}, prevHeight, height);
 
 
-	if (!is_external_buffer)
+	if (!is_external_screen_buffer && pixel_buffer)
 	{
 		uint16 color = 0;
 		uint8 r,g,b;
@@ -734,10 +741,12 @@ void S9xPutImage (int width, int height)
 				g = ((color>>5) & 0x3f) << 2;
 				b = (color & 0x1f) << 3;
 	
-				EM_ASM_(
-				{
-					window.set_tex_buf($0, $1, $2, $3, $4, $5);
-				}, x, y, r, g, b, linelen);
+				//EM_ASM_(
+				//{
+				//	window.set_tex_buf($0, $1, $2, $3, $4, $5);
+				//}, x, y, r, g, b, linelen);
+
+				pixel_buffer[y * linelen + x] = (255 << 24) | (b << 16) | (g << 8) | r;
 				
 			}
 		}

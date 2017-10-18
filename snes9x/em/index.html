@@ -49,12 +49,10 @@
         var current_frames = 0;
         var game_screen_width = 0;
         var game_screen_height = 0;
-        var tex_buf_array = null;
-        var tex_buf_array8 = null;
-        var tex_buf_array8u = null;
-        var tex_buf_array32 = null;
         var tex_buf_array16 = null;
-        var heap_buf_array16 = null; 
+        var heap_buf_array16 = null;
+        var tex_buf_array32 = null;
+        var heap_buf_array32 = null;
         var get_frames_func = null;
         var show_fps_func = null;
         var set_sample_rates_func = null;
@@ -78,30 +76,37 @@
                 tex_buf_array16 = new Uint16Array(game_screen_width * game_screen_height);
                 tex_buf_array16.fill(0xffff);
                 heap_buf_array16 = _arrayToHeap(tex_buf_array16);
-                Module.ccall('setbuff', null, ['number'], [heap_buf_array16.byteOffset]);
+                Module.ccall('setscreenbuff', null, ['number'], [heap_buf_array16.byteOffset]);
+            } else {
+                tex_buf_array32 = new Uint32Array(game_screen_width * game_screen_height);
+                tex_buf_array32.fill(0x00ffffff);
+                heap_buf_array32 = _arrayToHeap(tex_buf_array32);
+                Module.ccall('setpixelbuff', null, ['number'], [heap_buf_array32.byteOffset]);
             }
         }
 
         window.clear_tex_buf = function() {
-            tex_buf_array8.fill(0);
-        };
-
-        window.set_tex_buf = function(x, y, r, g, b, line) {
-            tex_buf_array32[y * line + x] = (255 << 24) | (b << 16) | (g << 8) | r;
+            if (heap_buf_array16) {
+                (new Uint16Array(heap_buf_array16.buffer, heap_buf_array16.byteOffset, game_screen_width * game_screen_height)).fill(0xffff);
+            }
+            if (heap_buf_array32) {
+                (new Uint32Array(heap_buf_array32.buffer, heap_buf_array32.byteOffset, game_screen_width * game_screen_height)).fill(0x00ffffff);
+            }
         };
 
         window.update_tex = function() {
-            if (gl && tex_buf_array8u) {
+            if (gl) {
                 if (using_gl == 1) {
-                    tex_buf_array8u.set(tex_buf_array8);
-                    updateTexture(gl, main_texture, tex_buf_array8u, game_screen_width, game_screen_height);
+                    updateTexture(gl, main_texture, 
+                        new Uint8Array(heap_buf_array32.buffer, heap_buf_array32.byteOffset, game_screen_width * game_screen_height * 4), 
+                        game_screen_width, game_screen_height);
                 } else {
-                    tex_buf_array16 = new Uint16Array(heap_buf_array16.buffer, heap_buf_array16.byteOffset, game_screen_width * game_screen_height);
-                    updateTexture(gl, main_texture, tex_buf_array16, game_screen_width, game_screen_height);
+                    updateTexture(gl, main_texture, 
+                        new Uint16Array(heap_buf_array16.buffer, heap_buf_array16.byteOffset, game_screen_width * game_screen_height), 
+                        game_screen_width, game_screen_height);
                 }
-                
             } else if (snes_canvas_img) {
-                snes_canvas_img.data.set(tex_buf_array8);
+                snes_canvas_img.data.set(new Uint8Array(heap_buf_array32.buffer, heap_buf_array32.byteOffset, game_screen_width * game_screen_height * 4));
                 snes_canvas_ctx.putImageData(snes_canvas_img, 0, 0);
             }
         };
@@ -121,12 +126,6 @@
 
                 Module.ccall('mainf', null, null);
 
-                tex_buf_array = new ArrayBuffer(game_screen_width * game_screen_height * 4);
-                if (tex_buf_array) {
-                    tex_buf_array8 = new Uint8ClampedArray(tex_buf_array);
-                    tex_buf_array32 = new Uint32Array(tex_buf_array);
-                    tex_buf_array8u = gl ? new Uint8Array(game_screen_width * game_screen_height * 4) : null;
-                }
                 snes_canvas_img = snes_canvas_ctx
                                   ? snes_canvas_ctx.createImageData(game_screen_width, game_screen_height)
                                   : null;
@@ -260,7 +259,6 @@
                     0, gl.RGBA, gl.UNSIGNED_BYTE, dataTypedArray);
             }
             
-
             gl.bindBuffer(gl.ARRAY_BUFFER, vx);
             gl.vertexAttribPointer(vx_ptr, 2, gl.FLOAT, false, 0, 0);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ix);
