@@ -714,11 +714,13 @@ void S9xPutImage (int width, int height)
 
 	if (prevWidth != width)
 		EM_ASM_({
+			window.update_scene_width($1);
 			console.log("width changed: " + $0 + " => " + $1);
 		}, prevWidth, width);
 
 	if (prevHeight != height)
 		EM_ASM_({
+			window.update_scene_height($1);
 			console.log("height changed: " + $0 + " => " + $1);
 		}, prevHeight, height);
 
