@@ -12,6 +12,8 @@ sdl.cpp
 set CCFLAGS=-DLSB_FIRST -fomit-frame-pointer -fno-exceptions -fno-rtti -pedantic -Wall -W -Wno-unused-parameter  -Wno-c++11-extensions ^
 -D_GNU_SOURCE=1 -D_REENTRANT -DHAVE_MKSTEMP -DHAVE_STRINGS_H -DHAVE_SYS_IOCTL_H -DHAVE_STDINT_H  -DRIGHTSHIFT_IS_SAR
 
+REM if you want to run it on iOS you might need to build wasm
+REM emcc -O3 -lm -lsdl -DUSE_SDL -s WASM=1 ^
 emcc -O3 -lm -lsdl -DUSE_SDL ^
  -s EXPORTED_FUNCTIONS="['_mainf', '_framesf', '_showfpsf', '_setsrf', '_setscreenbuff', '_setpixelbuff', '_savesramf', '_run']" ^
  -s FORCE_FILESYSTEM=1 ^

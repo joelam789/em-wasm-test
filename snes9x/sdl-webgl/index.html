@@ -42,8 +42,9 @@
     </div>
     <hr>
     <div>
-        <!-- <input type="text" id="fps" size="5"/> -->
         <input type="file" id="file-selector">
+        <!-- <input type="text" value="test.sfc" id="file-url"> -->
+        <!-- <button id="load">Load</button> -->
         <button id="start">Start</button>
         <button id="fullscreen">Fullscreen</button>
     </div>
@@ -246,6 +247,9 @@
 
             var startbttn = document.getElementById('start');
             var fileChooser = document.getElementById('file-selector');
+            //var loadbtn = document.getElementById('load');
+            //var urlChooser = document.getElementById('file-url');
+
             var cout_print = Module.print;
             var filename = "";
 
@@ -283,6 +287,30 @@
                 reader.readAsArrayBuffer(f);
             };
 
+            /*
+            var loadRomFromUrl = function() {
+                var url = urlChooser.value;
+                if (url && url.length > 0) {
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('GET', url, true);
+                    xhr.responseType = 'arraybuffer';
+                    xhr.onload = function(e) {
+                        filename = url.split('/').pop();
+                        cout_print(filename + " loaded");
+                        try {
+                            Module.FS_unlink("/" + filename);
+                            console.log("updating existing file: " + "/" + filename);
+                        } catch(ex) {
+                            console.log("adding new file: " + "/" + filename);
+                        }
+                        Module.FS_createDataFile("/", filename, new Uint8Array(this.response) , true, true);
+                        console.log("done");
+                    };
+                    xhr.send();
+                }
+            }
+            */
+
             var snesMain = (function() {
                 return function() {
                     if (save_sram_interval) clearInterval(save_sram_interval);
@@ -302,6 +330,7 @@
             })();
 
             startbttn.addEventListener('click', snesMain);
+            //loadbtn.addEventListener('click', loadRomFromUrl);
             fileChooser.addEventListener('change', snesReadFile);
             fullscreen.addEventListener('click', goFullScreen);
             // make sure we sync state before tab closes
@@ -309,9 +338,6 @@
                 if (save_sram_func) save_sram_func();
             });
         };
-
-        
-        
 
     </script>
 
@@ -492,6 +518,35 @@
             gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
             
         }
+
+        var isPlayingDummySound = false;
+        var dummyAudioContext = null;
+        var dummyAudioSource = null;
+        var dummyAudioBuffer = null;
+        var dummyGain = null;
+
+        function playDummySound() { // for iOS only ...
+            dummyAudioContext = SDL.audioContext;
+            if (dummyAudioContext) {
+                isPlayingDummySound = true;
+                if (dummyAudioSource == null) {
+                    dummyAudioBuffer = dummyAudioContext.createBuffer(2, 1, dummyAudioContext.sampleRate);
+                    dummyAudioSource = dummyAudioContext.createBufferSource();
+                    dummyAudioSource.buffer = dummyAudioBuffer;
+                    dummyGain = dummyAudioContext.createGain();
+                    dummyAudioSource.connect(dummyGain);
+                    dummyGain.connect(dummyAudioContext.destination);
+                    dummyGain.gain.value = 0; // make sure no noise comes form it
+                    if (dummyAudioSource) dummyAudioSource.start();
+                }
+            }
+        }
+        window.addEventListener("touchend", function() {
+            if (isPlayingDummySound == false) playDummySound();
+        });
+        window.addEventListener("mousedown", function() {
+            if (isPlayingDummySound == false) playDummySound();
+        });
 
     </script>
 
