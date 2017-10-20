@@ -231,6 +231,7 @@ static int     snes_img_w = 0;
 static int     snes_img_h = 0;
 
 static uint32  screen_update_times = 0;
+static uint32  game_sound_buffer_size = 100;
 
 void exit_handler();
 
@@ -241,9 +242,9 @@ void exit_handler()
 	Memory.SaveSRAM(S9xGetFilename(".srm", SRAM_DIR));
 	S9xResetSaveTimer(FALSE);
 
-	S9xBlitFilterDeinit();
-	S9xBlit2xSaIFilterDeinit();
-	S9xBlitHQ2xFilterDeinit();
+	//S9xBlitFilterDeinit();
+	//S9xBlit2xSaIFilterDeinit();
+	//S9xBlitHQ2xFilterDeinit();
 
 	S9xUnmapAllControls();
 	Memory.Deinit();
@@ -377,7 +378,7 @@ extern "C" int mainf(int argc, char** argv)
 	
 	EM_ASM( console.log("Going to init sound... "); );
 
-	if (!S9xInitSound(10, 0))
+	if (!S9xInitSound(game_sound_buffer_size, 0))
 	{
 		fprintf(stderr, "Could not initialize Snes9x Sound.\n");
 		//exit(1);
@@ -422,11 +423,10 @@ extern "C" int mainf(int argc, char** argv)
 	Settings.StopEmulation = FALSE;
 	
 	EM_ASM( console.log("Going to init filters... "); );
-
 	// Initialize filters
-	S9xBlitFilterInit();
-	S9xBlit2xSaIFilterInit();
-	S9xBlitHQ2xFilterInit();
+	//S9xBlitFilterInit();
+	//S9xBlit2xSaIFilterInit();
+	//S9xBlitHQ2xFilterInit();
 	
 	EM_ASM( console.log("Going to create buffers... "); );
 
@@ -707,8 +707,8 @@ void S9xPutImage (int width, int height)
 
 	if ((width <= SNES_WIDTH) && ((prevWidth != width) || (prevHeight != height)))
 	{
-		EM_ASM(console.log("S9xBlitClearDelta()"););
-		S9xBlitClearDelta();
+		EM_ASM(console.log("clean up screen"););
+		//S9xBlitClearDelta(); // if need this, you must run S9xBlitFilterInit() first
 		EM_ASM(window.clear_tex_buf(););
 	}
 
@@ -843,7 +843,7 @@ void S9xSoundCallback(void *data)
 
 	if (samplesHave > 0)
 	{
-		static const int maxSampleCount = 1024;
+		static const int maxSampleCount = 8192; // 4096 samples with left and right channels
 		static uint16 tempBuffer[maxSampleCount];
 		memset(tempBuffer, 0, maxSampleCount*2);
 

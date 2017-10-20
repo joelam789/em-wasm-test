@@ -303,13 +303,13 @@
 			var bufferArray = this.audioPlayingBuffers;
 			if (bufferArray != null && bufferArray.length > 0) bufferData = bufferArray.shift();
 
-			var ichannels = [];
+			//var ichannels = [];
 			var ochannels = [];
 			var inbuf = e.inputBuffer;
 			var outbuf = e.outputBuffer;
 			var channelCount = outbuf.numberOfChannels;
 			for (var cidx=0; cidx<channelCount; cidx++) {
-				ichannels[ichannels.length] = inbuf.getChannelData(cidx);
+				//ichannels[ichannels.length] = inbuf.getChannelData(cidx);
 				ochannels[ochannels.length] = outbuf.getChannelData(cidx);
 			}
 			
