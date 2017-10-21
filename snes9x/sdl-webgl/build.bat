@@ -15,7 +15,7 @@ set CCFLAGS=-DLSB_FIRST -fomit-frame-pointer -fno-exceptions -fno-rtti -pedantic
 REM if you want to run it on iOS you might need to build wasm
 REM emcc -O3 -lm -lsdl -DUSE_SDL -s WASM=1 ^
 emcc -O3 -lm -lsdl -DUSE_SDL ^
- -s EXPORTED_FUNCTIONS="['_mainf', '_framesf', '_showfpsf', '_setsrf', '_setscreenbuff', '_setpixelbuff', '_savesramf', '_run']" ^
+ -s EXPORTED_FUNCTIONS="['_mainf', '_framesf', '_showfpsf', '_setsrf', '_setscreenbuff', '_setpixelbuff', '_savesramf', '_rptbtnf', '_run']" ^
  -s FORCE_FILESYSTEM=1 ^
  -s TOTAL_MEMORY=50331648 ^
  -o snes9x-sdl.js ^

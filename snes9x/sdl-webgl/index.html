@@ -1,7 +1,6 @@
-<html>
+<html style="width: 100%; height: 100%; position: fixed; overflow-y: hidden;">
     <head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
     <style>
         canvas.emscripten {
             border: 0px none;
@@ -28,10 +27,57 @@
             text-align: center;
         }
     </style>
+
+    <style type="text/css">
+        .round-button {
+            width:80%;
+        }
+        .round-button-circle {
+            width: 100%;
+            height:0;
+            padding-bottom: 100%;
+            border-radius: 50%;
+            border:10px solid #cfdcec;
+            overflow:hidden;
+            background: #4679BD; 
+            box-shadow: 0 0 3px gray;
+        }
+        .round-button-circle:hover {
+            background:#30588e;
+        }
+        .round-button-rect {
+            width: 100%;
+            height:0;
+            padding-bottom: 100%;
+            border-radius: 10%;
+            border:10px solid #cfdcec;
+            overflow:hidden;
+            background: #4679BD; 
+            box-shadow: 0 0 3px gray;
+        }
+        .round-button-rect:hover {
+            background:#30588e;
+        }
+        .round-button a {
+            display:block;
+            float:left;
+            width:100%;
+            padding-top:50%;
+            padding-bottom:50%;
+            line-height:1em;
+            margin-top:-0.5em;
+            text-align:center;
+            color:#e2eaf3;
+            font-family:Verdana;
+            font-size:1.2em;
+            font-weight:bold;
+            text-decoration:none;
+        }
+    </style> 
     </head>
 
-    <body>
-
+    <body style="width: 100%; height: 100%; position: fixed; overflow-y: hidden;">
+    
     <figure style="overflow:visible;" id="spinner"><div class="spinner"></div><center style="margin-top:0.5em"><strong>emscripten</strong></center></figure>
     <div class="emscripten" id="status">Downloading...</div>
     <div class="emscripten">
@@ -42,24 +88,31 @@
     </div>
     <hr>
     <div>
-        <input type="file" id="file-selector">
+        <input type="file" id="file-selector" style="float: left">
         <!-- <input type="text" value="test.sfc" id="file-url"> -->
         <!-- <button id="load">Load</button> -->
-        <button id="start">Start</button>
-        <button id="fullscreen">Fullscreen</button>
+        <!-- <button id="start">Start</button> -->
+        <!-- <button id="fullscreen">Fullscreen</button> -->
+
+        <div style="float: right; margin-left: 20px; margin-right: 20px;">
+        <input type="checkbox" id="ckbfps"  
+        onclick = 'need_to_show_fps = this.checked;'
+        checked> Show FPS
+        </div>
     </div>
 
-    <hr>
     <p><textarea style="width: 100%" id="output" rows="8"></textarea></p>
-
-
+    
     <script>
 
         var save_sram_interval = null;
         var fps_interval = null;
 
+        var need_to_show_fps = true;
+
         var run_func = null;
         var save_sram_func = null;
+        var report_btn_func = null;
 
         var current_frames = 0;
         var game_screen_width = 0;
@@ -220,6 +273,7 @@
                 get_frames_func = Module.cwrap('framesf', 'number', null);
                 show_fps_func = Module.cwrap('showfpsf', null, ['number', 'number']);
                 set_sample_rates_func = Module.cwrap('setsrf', null, ['number', 'number']);
+                report_btn_func = Module.cwrap('rptbtnf', null, ['number', 'number']);
                 save_sram_func = Module.cwrap('savesramf', null, null);
                 run_func = Module.cwrap('run', null, ['string']);
 
@@ -245,7 +299,7 @@
         // system a chance to sync.
         window.initSNES = function() {
 
-            var startbttn = document.getElementById('start');
+            //var startbttn = document.getElementById('start');
             var fileChooser = document.getElementById('file-selector');
             //var loadbtn = document.getElementById('load');
             //var urlChooser = document.getElementById('file-url');
@@ -271,7 +325,7 @@
                     } else {
                         count_print(e.loaded + "bytes");
                     }
-                    document.getElementById("start").disabled = false;
+                    //document.getElementById("start").disabled = false;
                 };
                 reader.onload = function(e) {
                     cout_print(f.name + " loaded");
@@ -283,6 +337,7 @@
                     }
                     Module.FS_createDataFile("/", f.name, new Uint8Array(this.result) , true, true);
                     console.log("done");
+                    snesMain();
                 };
                 reader.readAsArrayBuffer(f);
             };
@@ -311,28 +366,30 @@
             }
             */
 
-            var snesMain = (function() {
-                return function() {
-                    if (save_sram_interval) clearInterval(save_sram_interval);
-                    if (fps_interval) clearInterval(fps_interval);
-                    document.getElementById("start").disabled = true;
-                    run_func(filename);
-                    save_sram_interval = setInterval(function() { 
+            function snesMain() {
+                if (save_sram_interval) clearInterval(save_sram_interval);
+                if (fps_interval) clearInterval(fps_interval);
+                //document.getElementById("start").disabled = true;
+                run_func(filename);
+                save_sram_interval = setInterval(function() {
+                    try {
                         if (save_sram_func) save_sram_func();
-                    }, 10000);
-                    fps_interval = setInterval(function() {
-                        var fps = get_frames_func() - current_frames;
-                        current_frames += fps;
-                        show_fps_func(fps, using_gl);
-                        //console.log("FPS: " + fps);
-                    }, 1000);
-                };
-            })();
+                    } catch(ex) {
+                        cout_print("Failed to auto save SRAM: " + ex);
+                    }
+                }, 10000);
+                fps_interval = setInterval(function() {
+                    var fps = get_frames_func() - current_frames;
+                    current_frames += fps;
+                    if (need_to_show_fps) show_fps_func(fps, using_gl);
+                    //console.log("FPS: " + fps);
+                }, 1000);
+            };
 
-            startbttn.addEventListener('click', snesMain);
+            //startbttn.addEventListener('click', snesMain);
             //loadbtn.addEventListener('click', loadRomFromUrl);
             fileChooser.addEventListener('change', snesReadFile);
-            fullscreen.addEventListener('click', goFullScreen);
+            //fullscreen.addEventListener('click', goFullScreen);
             // make sure we sync state before tab closes
             window.addEventListener('beforeunload', function() { 
                 if (save_sram_func) save_sram_func();
@@ -568,6 +625,169 @@
         var script = document.createElement('script');
         script.src = "snes9x-sdl.js";
         document.body.appendChild(script);
+
+    </script>
+
+    <div>
+            <div style="width: 90px; margin-left: 85%;">
+                    <div class="round-button"><div class="round-button-rect">
+                        <a href="javascript:;" class="round-button" id="gbtn_start">START</a>
+                    </div></div>
+            </div>
+    </div>
+
+    <p>
+    <div id="joystick" style="width: 50%; height: 400px; float: left;"></div>
+    <div id="gamebtns" style="width: 50%; float: right;">
+            <div>
+                    <div style="width: 33%; margin-left: 33%;">
+                            <div class="round-button"><div class="round-button-circle" style="background: blue">
+                                <a href="javascript:;" class="round-button" id="gbtn_x">X</a>
+                            </div></div>
+                    </div>
+            </div>
+            <div>
+                    <div style="width: 33%; float: left;">
+                            <div class="round-button"><div class="round-button-circle" style="background: green">
+                                <a href="javascript:;" class="round-button" id="gbtn_y">Y</a>
+                            </div></div>
+                    </div>
+                    <div style="width: 33%; margin-left: 33%; float: right;">
+                            <div class="round-button"><div class="round-button-circle" style="background: red">
+                                <a href="javascript:;" class="round-button" id="gbtn_a">A</a>
+                            </div></div>
+                    </div>
+            </div>
+            <div>
+                    <div style="width: 33%; margin-left: 33%;">
+                            <div class="round-button"><div class="round-button-circle" style="background: yellow">
+                                <a href="javascript:;" class="round-button" id="gbtn_b">B</a>
+                            </div></div>
+                    </div>
+            </div>
+    </div>
+    </p>
+
+    <script src="nipplejs.min.js"></script>
+    
+    <script>
+        var vbuttons = {
+            right: 1103,
+            left: 1104,
+            down: 1105,
+            up: 1106,
+            start: 13,
+            select: 32,
+            a: 120,
+            b: 122,
+            x: 114,
+            y: 97,
+            lb: 113,
+            rb: 119
+        };
+
+        function bindGameButton(btnid) {
+            var btnobj = document.getElementById(btnid);
+            if (btnobj) {
+                btnobj.onmousedown = btnobj.ontouchstart = function(e) {
+                    e.preventDefault();
+                    var bname = e.target.id.split("_").pop();
+                    report_btn_func(vbuttons[bname], 1);
+                };
+                btnobj.onmouseup = btnobj.ontouchend = function(e) {
+                    e.preventDefault();
+                    var bname = e.target.id.split("_").pop();
+                    report_btn_func(vbuttons[bname], 0);
+                };
+            }
+        }
+
+        bindGameButton("gbtn_start");
+        bindGameButton("gbtn_x");
+        bindGameButton("gbtn_y");
+        bindGameButton("gbtn_a");
+        bindGameButton("gbtn_b");
+
+        var gbarea = document.getElementById("gamebtns");
+        gbarea.onmousedown = gbarea.ontouchstart = gbarea.onmouseup = gbarea.ontouchend = function(e) {
+                    e.preventDefault();
+        };
+
+        window.vjoystick = nipplejs.create({
+            zone: document.getElementById('joystick'),
+            mode: "static",
+            color: "blue",
+            size: 200,
+            position: {left: window.innerWidth / 5, top: 980}
+        });
+
+        window.vjoystick.on('start', function (evt, nipple) {
+            nipple.on('move', function (e, data) {
+                var a = data.angle.degree;
+                if (a <= 22.5 || a > 360 - 22.5) {
+                    report_btn_func(vbuttons['right'], 1);
+
+                    report_btn_func(vbuttons['down'], 0);
+                    report_btn_func(vbuttons['left'], 0);
+                    report_btn_func(vbuttons['up'], 0);
+                }
+                else if (a > 22.5 && a <= 22.5 + 45) {
+                    report_btn_func(vbuttons['right'], 1);
+                    report_btn_func(vbuttons['up'], 1);
+
+                    report_btn_func(vbuttons['down'], 0);
+                    report_btn_func(vbuttons['left'], 0);
+                }
+                else if (a > 22.5 + 45 && a <= 22.5 + 90) {
+                    report_btn_func(vbuttons['up'], 1);
+
+                    report_btn_func(vbuttons['down'], 0);
+                    report_btn_func(vbuttons['left'], 0);
+                    report_btn_func(vbuttons['right'], 0);
+                }
+                else if (a > 22.5 + 90 && a <= 22.5 + 135) {
+                    report_btn_func(vbuttons['up'], 1);
+                    report_btn_func(vbuttons['left'], 1);
+
+                    report_btn_func(vbuttons['down'], 0);
+                    report_btn_func(vbuttons['right'], 0);
+                }
+                else if (a > 22.5 + 135 && a <= 22.5 + 180) {
+                    report_btn_func(vbuttons['left'], 1);
+
+                    report_btn_func(vbuttons['down'], 0);
+                    report_btn_func(vbuttons['up'], 0);
+                    report_btn_func(vbuttons['right'], 0);
+                }
+                else if (a > 22.5 + 180 && a <= 22.5 + 225) {
+                    report_btn_func(vbuttons['left'], 1);
+                    report_btn_func(vbuttons['down'], 1);
+
+                    report_btn_func(vbuttons['up'], 0);
+                    report_btn_func(vbuttons['right'], 0);
+                }
+                else if (a > 22.5 + 225 && a <= 22.5 + 270) {
+                    report_btn_func(vbuttons['down'], 1);
+
+                    report_btn_func(vbuttons['up'], 0);
+                    report_btn_func(vbuttons['left'], 0);
+                    report_btn_func(vbuttons['right'], 0);
+                }
+                else if (a > 22.5 + 270 && a <= 22.5 + 315) {
+                    report_btn_func(vbuttons['down'], 1);
+                    report_btn_func(vbuttons['right'], 1);
+
+                    report_btn_func(vbuttons['up'], 0);
+                    report_btn_func(vbuttons['left'], 0);
+                }
+            });
+        }).on('end', function (evt, nipple) {
+            nipple.off('move');
+            report_btn_func(vbuttons['up'], 0);
+            report_btn_func(vbuttons['down'], 0);
+            report_btn_func(vbuttons['left'], 0);
+            report_btn_func(vbuttons['right'], 0);
+        });
 
     </script>
 

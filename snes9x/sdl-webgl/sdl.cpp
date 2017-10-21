@@ -338,9 +338,9 @@ void S9xPutImage (int width, int height)
 
 	if ((width <= SNES_WIDTH) && ((prevWidth != width) || (prevHeight != height)))
 	{
-		EM_ASM(console.log("clean up screen"););
+		//EM_ASM(console.log("clean up screen"););
 		//S9xBlitClearDelta(); // if need this, you must run S9xBlitFilterInit() first
-		EM_ASM(window.clear_tex_buf(););
+		//EM_ASM(window.clear_tex_buf(););
 	}
 
 	if (prevWidth != width)
@@ -521,9 +521,7 @@ extern "C" void showfpsf(int fps, int flags)
 
 extern "C" void savesramf()
 {
-	EM_ASM(console.log("trying to save sram..."););
 	S9xAutoSaveSRAM();
-	EM_ASM(console.log("auto save sram - done"););
 }
 
 extern "C" void setsrf(int inputRate, int outputRate)
@@ -543,6 +541,11 @@ extern "C" void setpixelbuff(uint32* pixelbuf)
 {
 	pixel_buffer = pixelbuf;
 	EM_ASM( console.log("set gui display buffer! "); );
+}
+
+extern "C" void rptbtnf(int key, int state)
+{
+	S9xReportButton(key, state > 0);
 }
 
 void mainloop()
@@ -568,8 +571,8 @@ void load(char *filename)
 
 	printf("Attempting to load SRAM %s.\n", S9xGetFilename(".srm", SRAM_DIR));
 	bool8 sramloaded = Memory.LoadSRAM(S9xGetFilename(".srm", SRAM_DIR));
-	if (sramloaded) printf("Load successful.\n");
-	else printf("Load failed.\n");
+	if (sramloaded) printf("Load SRAM successful.\n");
+	else printf("Failed to load SRAM.\n");
 
 	CPU.Flags = saved_flags;
 	Settings.StopEmulation = FALSE;
