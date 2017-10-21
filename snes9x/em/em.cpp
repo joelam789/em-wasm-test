@@ -707,9 +707,9 @@ void S9xPutImage (int width, int height)
 
 	if ((width <= SNES_WIDTH) && ((prevWidth != width) || (prevHeight != height)))
 	{
-		EM_ASM(console.log("clean up screen"););
+		//EM_ASM(console.log("clean up screen"););
 		//S9xBlitClearDelta(); // if need this, you must run S9xBlitFilterInit() first
-		EM_ASM(window.clear_tex_buf(););
+		//EM_ASM(window.clear_tex_buf(););
 	}
 
 	if (prevWidth != width)
