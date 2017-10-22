@@ -9,4 +9,4 @@
 2. https://github.com/domaemon/snes9x-sdl
 3. https://github.com/gurka/snes9x-sdl2
 
-
+- All the rom files here are for study purposes only
