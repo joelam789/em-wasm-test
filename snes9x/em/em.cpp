@@ -354,7 +354,7 @@ extern "C" int mainf(int argc, char** argv)
 	EM_ASM( console.log("Going to check input file... "); );
 	
 	//char* rom_filename = S9xParseArgs(argv, argc);
-	char* rom_filename = "test.sfc";
+	char* rom_filename = "test.smc";
 	if (rom_filename == nullptr)
 	{
 		S9xUsage();

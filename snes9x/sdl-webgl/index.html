@@ -87,28 +87,39 @@
         <canvas class="emscripten" id="snes-canvas" oncontextmenu="event.preventDefault()"></canvas>
     </div>
     <hr>
-    <div>
-        <input type="file" id="file-selector" style="float: left">
+    <div id="emlogger" style="position:absolute; opacity: 0.5; width: 100%; top: 80px; display: none">
+        <textarea style="width: 100%" id="output" rows="8"></textarea>
+    </div>
+    <div style="height: 30px; border-bottom: solid #cfcfcf;">
+        <div style="float: left;">
+        <input type="file" accept=".sfc, .smc, .fig, .swc" id="file-selector">
         <!-- <input type="text" value="test.sfc" id="file-url"> -->
         <!-- <button id="load">Load</button> -->
         <!-- <button id="start">Start</button> -->
         <!-- <button id="fullscreen">Fullscreen</button> -->
+        </div>
 
         <div style="float: right; margin-left: 20px; margin-right: 20px;">
         <input type="checkbox" id="ckbfps"  
         onclick = 'need_to_show_fps = this.checked;'
-        checked> Show FPS
+        > Show FPS
+        </div>
+
+        <div style="float: right; margin-left: 20px; margin-right: 20px;">
+        <input type="checkbox" id="ckbfps"  
+        onclick = "document.getElementById('emlogger').style.display = this.checked ? 'block' : 'none'"
+        > Show Log
         </div>
     </div>
 
-    <p><textarea style="width: 100%" id="output" rows="8"></textarea></p>
+    
     
     <script>
 
         var save_sram_interval = null;
         var fps_interval = null;
 
-        var need_to_show_fps = true;
+        var need_to_show_fps = false;
 
         var run_func = null;
         var save_sram_func = null;
@@ -217,7 +228,7 @@
                 return function(text) {
                     var txt = arguments.length > 1 ? [].slice.call(arguments).join(' ') : text;
                     element.value += txt + "\n";
-                    element.scrollTop = element.scrollHeight; // focus on bottom
+                    element.scrollTop = element.scrollHeight - element.clientHeight; // focus on bottom
                 };
             })(),
             printErr: function(text) {
@@ -370,7 +381,14 @@
                 if (save_sram_interval) clearInterval(save_sram_interval);
                 if (fps_interval) clearInterval(fps_interval);
                 //document.getElementById("start").disabled = true;
-                run_func(filename);
+                var runromok = false;
+                try {
+                    run_func(filename);
+                    runromok = true;
+                } catch(ex) {
+                    cout_print("Failed to run ROM '" + filename + "': " + ex);
+                }
+                if (!runromok) return;
                 save_sram_interval = setInterval(function() {
                     try {
                         if (save_sram_func) save_sram_func();
@@ -631,13 +649,13 @@
     <div>
             <div style="width: 90px; margin-left: 85%;">
                     <div class="round-button"><div class="round-button-rect">
-                        <a href="javascript:;" class="round-button" id="gbtn_start">START</a>
+                        <a href="javascript:;" class="round-button" style="font-size:0.8em;" id="gbtn_start">START</a>
                     </div></div>
             </div>
     </div>
 
-    <p>
-    <div id="joystick" style="width: 50%; height: 400px; float: left;"></div>
+    <div>
+    <div id="joystick" style="width: 50%; height: 600px; float: left;"></div>
     <div id="gamebtns" style="width: 50%; float: right;">
             <div>
                     <div style="width: 33%; margin-left: 33%;">
@@ -666,7 +684,7 @@
                     </div>
             </div>
     </div>
-    </p>
+    </div>
 
     <script src="nipplejs.min.js"></script>
     
@@ -716,9 +734,9 @@
         window.vjoystick = nipplejs.create({
             zone: document.getElementById('joystick'),
             mode: "static",
-            color: "blue",
+            color: "grey",
             size: 200,
-            position: {left: window.innerWidth / 5, top: 980}
+            position: {left: window.innerWidth / 5, top: 610 + window.innerWidth / 4}
         });
 
         window.vjoystick.on('start', function (evt, nipple) {

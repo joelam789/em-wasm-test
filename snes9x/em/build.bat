@@ -17,6 +17,6 @@ emcc -O3 -lm ^
  -s EXPORTED_FUNCTIONS="['_mainf', '_framesf', '_showfpsf', '_setsrf', '_setscreenbuff', '_setpixelbuff']" ^
  -s FORCE_FILESYSTEM=1 ^
  -s TOTAL_MEMORY=50331648 ^
- --preload-file test.sfc ^
+ --preload-file test.smc ^
  -o snes9x.js ^
  %INCLUDES% %CCFLAGS% %OBJECTS% 
