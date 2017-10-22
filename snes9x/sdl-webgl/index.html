@@ -646,10 +646,25 @@
 
     </script>
 
-    <div>
-            <div style="width: 90px; margin-left: 85%;">
+    <div style="width: 100%;">
+            <div style="width: 90px; float: left;">
+                    <div class="round-button"><div class="round-button-rect">
+                        <a href="javascript:;" class="round-button" style="font-size:0.8em;" id="gbtn_lb">LB</a>
+                    </div></div>
+            </div>
+            <div style="width: 90px; float: left; margin-left: calc(50% - 180px);">
                     <div class="round-button"><div class="round-button-rect">
                         <a href="javascript:;" class="round-button" style="font-size:0.8em;" id="gbtn_start">START</a>
+                    </div></div>
+            </div>
+            <div style="width: 90px; float: left;">
+                    <div class="round-button"><div class="round-button-rect">
+                        <a href="javascript:;" class="round-button" style="font-size:0.8em;" id="gbtn_select">SELECT</a>
+                    </div></div>
+            </div>
+            <div style="width: 90px; float: right; margin-right: 10px;">
+                    <div class="round-button"><div class="round-button-rect">
+                        <a href="javascript:;" class="round-button" style="font-size:0.8em;" id="gbtn_rb">RB</a>
                     </div></div>
             </div>
     </div>
@@ -721,10 +736,13 @@
         }
 
         bindGameButton("gbtn_start");
+        bindGameButton("gbtn_select");
         bindGameButton("gbtn_x");
         bindGameButton("gbtn_y");
         bindGameButton("gbtn_a");
         bindGameButton("gbtn_b");
+        bindGameButton("gbtn_lb");
+        bindGameButton("gbtn_rb");
 
         var gbarea = document.getElementById("gamebtns");
         gbarea.onmousedown = gbarea.ontouchstart = gbarea.onmouseup = gbarea.ontouchend = function(e) {
