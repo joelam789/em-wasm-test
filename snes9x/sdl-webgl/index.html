@@ -99,16 +99,20 @@
         <!-- <button id="fullscreen">Fullscreen</button> -->
         </div>
 
-        <div style="float: right; margin-left: 20px; margin-right: 20px;">
+        <div style="float: right; margin-left: 10px; margin-right: 20px;">
         <input type="checkbox" id="ckbfps"  
         onclick = 'need_to_show_fps = this.checked;'
         > Show FPS
         </div>
 
-        <div style="float: right; margin-left: 20px; margin-right: 20px;">
+        <div style="float: right; margin-left: 20px;">
         <input type="checkbox" id="ckbfps"  
         onclick = "document.getElementById('emlogger').style.display = this.checked ? 'block' : 'none'"
         > Show Log
+        </div>
+
+        <div style="float: right;">
+            <input type="text" maxlength="128" size="5" value="sf2.smc" id="file-url"><button id="load">Load</button>
         </div>
     </div>
 
@@ -312,8 +316,8 @@
 
             //var startbttn = document.getElementById('start');
             var fileChooser = document.getElementById('file-selector');
-            //var loadbtn = document.getElementById('load');
-            //var urlChooser = document.getElementById('file-url');
+            var loadbtn = document.getElementById('load');
+            var urlChooser = document.getElementById('file-url');
 
             var cout_print = Module.print;
             var filename = "";
@@ -353,13 +357,20 @@
                 reader.readAsArrayBuffer(f);
             };
 
-            /*
             var loadRomFromUrl = function() {
                 var url = urlChooser.value;
                 if (url && url.length > 0) {
+                    loadbtn.disabled = true;
                     var xhr = new XMLHttpRequest();
                     xhr.open('GET', url, true);
                     xhr.responseType = 'arraybuffer';
+                    xhr.onloadend = function(e) {
+                        loadbtn.disabled = false;
+                        loadbtn.innerHTML = "Load";
+                    };
+                    xhr.onprogress = function(e) {
+                        loadbtn.innerHTML = Math.round(e.loaded * 100 / e.total) + "%";
+                    };
                     xhr.onload = function(e) {
                         filename = url.split('/').pop();
                         cout_print(filename + " loaded");
@@ -371,11 +382,11 @@
                         }
                         Module.FS_createDataFile("/", filename, new Uint8Array(this.response) , true, true);
                         console.log("done");
+                        snesMain();
                     };
                     xhr.send();
                 }
             }
-            */
 
             function snesMain() {
                 if (save_sram_interval) clearInterval(save_sram_interval);
@@ -405,7 +416,7 @@
             };
 
             //startbttn.addEventListener('click', snesMain);
-            //loadbtn.addEventListener('click', loadRomFromUrl);
+            loadbtn.addEventListener('click', loadRomFromUrl);
             fileChooser.addEventListener('change', snesReadFile);
             //fullscreen.addEventListener('click', goFullScreen);
             // make sure we sync state before tab closes
