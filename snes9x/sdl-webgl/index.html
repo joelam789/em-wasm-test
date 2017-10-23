@@ -102,13 +102,17 @@
         <div style="float: right; margin-left: 10px; margin-right: 20px;">
         <input type="checkbox" id="ckbfps"  
         onclick = 'need_to_show_fps = this.checked;'
-        > Show FPS
+        > FPS
         </div>
 
         <div style="float: right; margin-left: 20px;">
         <input type="checkbox" id="ckbfps"  
         onclick = "document.getElementById('emlogger').style.display = this.checked ? 'block' : 'none'"
-        > Show Log
+        > Log
+        </div>
+
+        <div style="float: right;">
+            <button id="next">Next</button>
         </div>
 
         <div style="float: right;">
@@ -116,7 +120,15 @@
         </div>
     </div>
 
-    
+    <script>
+        var test_rom_index = 0;
+        var test_rom_list = ["par.sfc", "sf2.smc", "sd3.sfc"];
+        document.getElementById("file-url").value = test_rom_list[test_rom_index % test_rom_list.length];
+        document.getElementById("next").onclick = function() {
+            test_rom_index++;
+            document.getElementById("file-url").value = test_rom_list[test_rom_index % test_rom_list.length];
+        }
+    </script>
     
     <script>
 

@@ -233,7 +233,9 @@ static int     snes_img_w = 0;
 static int     snes_img_h = 0;
 
 static uint32  screen_update_times = 0;
+
 static uint32  game_sound_buffer_size = 100;
+static int  game_audio_samples = 1024; // needs to be power-of-two
 
 static bool is_running = false;
 
@@ -421,7 +423,7 @@ bool8 S9xOpenSoundDevice (void)
 	audiospec->channels = Settings.Stereo ? 2 : 1;
 	audiospec->format = Settings.SixteenBitSound ? AUDIO_S16SYS : AUDIO_U8;
 
-    audiospec->samples = 1024; // needs to be power-of-two
+    audiospec->samples = game_audio_samples; // needs to be power-of-two
 
 	audiospec->callback = sdl_audio_callback;
 	
