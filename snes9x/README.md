@@ -1,6 +1,9 @@
 # snes9x
 
-- A runnable output: https://rawgit.com/joelam789/em-wasm-test/master/snes9x/sdl-webgl/index.html
+- Runnable outputs:
+
+1. https://joelam789.github.io/snes9x 
+2. https://rawgit.com/joelam789/em-wasm-test/master/snes9x/sdl-webgl/index.html
 
 - To build the projects here, you need to get the source code of snes9x by yourself.
 
