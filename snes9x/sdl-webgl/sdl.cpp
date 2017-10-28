@@ -600,6 +600,11 @@ extern "C" void run(char *filename)
 	else S9xSoftReset();
 }
 
+extern "C" void reset() 
+{
+    S9xSoftReset();
+}
+
 extern "C" int mainf (int argc, char **argv)
 {
 	printf("\n\nSnes9x " VERSION " for HTML5 (with EM + SDL)\n");
@@ -646,7 +651,7 @@ extern "C" int mainf (int argc, char **argv)
 	Settings.TurboSkipFrames = 15;
 	Settings.CartAName[0] = 0;
 	Settings.CartBName[0] = 0;
-	Settings.NoPatch= TRUE;
+	Settings.NoPatch= FALSE;
 	Settings.SoundSync = FALSE;
 
 	Settings.Mute = FALSE;
